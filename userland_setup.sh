@@ -47,6 +47,7 @@ sudo apt install -y -qq \
     nano \
     openssh-server \
     net-tools \
+    ffmpeg \
     && ok "Pacotes instalados"
 
 # --------------------------------------------------------------
