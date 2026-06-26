@@ -49,21 +49,20 @@ sudo apt install -y -qq \
 #    Ubuntu moderno tem "Include /etc/ssh/sshd_config.d/*.conf"
 #    no topo do sshd_config, então um arquivo aqui sobrescreve.
 # --------------------------------------------------------------
-#log "Configurando sshd..."
+log "Configurando sshd..."
 
-# Escreve um drop-in que sobrescreve o sshd_config padrão.
-# Robusto: não depende de sed nem da ordem/linhas do arquivo original.
-#SSHD_DROPIN="/etc/ssh/sshd_config.d/99-userland.conf"
+SSHD_MAIN="/etc/ssh/sshd_config"
 
-#sudo mkdir -p /etc/ssh/sshd_config.d
-#sudo tee "$SSHD_DROPIN" > /dev/null <<'EOF'
-#Port 2223
-#ListenAddress 0.0.0.0
-#PasswordAuthentication yes
-#EOF
-#ok "Drop-in sshd criado em $SSHD_DROPIN (Port 2223, ListenAddress, PasswordAuthentication)"
+# Porta: "#Port 22" ou "Port 22" -> "Port 2223"
+sudo sed -i -E 's/^#?\s*Port .*/Port 2223/' "$SSHD_MAIN" && ok "Porta SSH alterada para 2223"
 
-#sudo ssh-keygen -A && ok "Chave gerada"
+# ListenAddress: descomenta "#ListenAddress 0.0.0.0" -> "ListenAddress 0.0.0.0"
+sudo sed -i -E 's/^#?\s*ListenAddress 0\.0\.0\.0/ListenAddress 0.0.0.0/' "$SSHD_MAIN" && ok "ListenAddress habilitado"
 
-#sudo service ssh stop && ok "Serviço ssh parado"
-#/usr/sbin/sshd && ok "Serviço ssh iniciado"
+# PasswordAuthentication: "#PasswordAuthentication yes/no" -> "PasswordAuthentication yes"
+sudo sed -i -E 's/^#?\s*PasswordAuthentication .*/PasswordAuthentication yes/' "$SSHD_MAIN" && ok "PasswordAuthentication habilitado"
+
+sudo ssh-keygen -A && ok "Chave gerada"
+
+sudo service ssh stop && ok "Serviço ssh parado"
+/usr/sbin/sshd && ok "Serviço ssh iniciado"
