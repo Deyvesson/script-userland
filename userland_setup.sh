@@ -26,6 +26,10 @@ echo "  Userland Ubuntu — Setup Inicial"
 echo "======================================"
 echo ""
 
+log "Set uma senha:"
+
+sudo passwd userland && ok "Senha definida"
+
 # --------------------------------------------------------------
 # 1. Atualizar pacotes
 # --------------------------------------------------------------
