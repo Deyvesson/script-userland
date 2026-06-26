@@ -53,14 +53,13 @@ log "Configurando sshd..."
 
 SSHD_MAIN="/etc/ssh/sshd_config"
 
-# Porta: "#Port 22" ou "Port 22" -> "Port 2223"
-sudo sed -i -E 's/^#?\s*Port .*/Port 2223/' "$SSHD_MAIN" && ok "Porta SSH alterada para 2223"
+sudo tee -a "$SSHD_MAIN" >/dev/null <<'EOF'
+Port 2223
+ListenAddress 0.0.0.0
+PasswordAuthentication yes
+EOF
 
-# ListenAddress: descomenta "#ListenAddress 0.0.0.0" -> "ListenAddress 0.0.0.0"
-sudo sed -i -E 's/^#?\s*ListenAddress 0\.0\.0\.0/ListenAddress 0.0.0.0/' "$SSHD_MAIN" && ok "ListenAddress habilitado"
-
-# PasswordAuthentication: "#PasswordAuthentication yes/no" -> "PasswordAuthentication yes"
-sudo sed -i -E 's/^#?\s*PasswordAuthentication .*/PasswordAuthentication yes/' "$SSHD_MAIN" && ok "PasswordAuthentication habilitado"
+ok "sshd configurado"
 
 sudo ssh-keygen -A && ok "Chave gerada"
 
