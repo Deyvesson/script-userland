@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 log()  { echo -e "${BLUE}[INFO]${NC} $1"; }
 ok()   { echo -e "${GREEN}[ OK ]${NC} $1"; }
@@ -63,34 +63,45 @@ $SUDO apt-get install -y -qq \
     && ok "Pacotes instalados"
 
 # --------------------------------------------------------------
-# 3. Configurar o sshd_config
+# 3. Configurar o sshd via drop-in (sem sed — robusto)
+#    Ubuntu moderno tem "Include /etc/ssh/sshd_config.d/*.conf"
+#    no topo do sshd_config, então um arquivo aqui sobrescreve.
 # --------------------------------------------------------------
 log "Configurando sshd..."
 
-SSHD_CONFIG="/etc/ssh/sshd_config"
+SSHD_MAIN="/etc/ssh/sshd_config"
+SSHD_DROPIN_DIR="/etc/ssh/sshd_config.d"
 
-# Porta 2223
-$SUDO sed -i 's/^#*Port .*/Port 2223/' "$SSHD_CONFIG"
-$SUDO grep -q "^Port " "$SSHD_CONFIG" || echo "Port 2223" | $SUDO tee -a "$SSHD_CONFIG" > /dev/null
+# Garante que o diretório de drop-in existe e é incluído
+$SUDO mkdir -p "$SSHD_DROPIN_DIR"
 
-# Permitir autenticação por senha
-$SUDO sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' "$SSHD_CONFIG"
-$SUDO grep -q "^PasswordAuthentication " "$SSHD_CONFIG" || echo "PasswordAuthentication yes" | $SUDO tee -a "$SSHD_CONFIG" > /dev/null
+if ! $SUDO grep -q "^Include .*sshd_config.d" "$SSHD_MAIN" 2>/dev/null; then
+    warn "Diretiva Include ausente — adicionando ao sshd_config"
+    echo "Include $SSHD_DROPIN_DIR/*.conf" | $SUDO tee -a "$SSHD_MAIN" > /dev/null
+fi
 
-# Escutar em todos os endereços
-$SUDO sed -i 's/^#*ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG"
-$SUDO grep -q "^ListenAddress " "$SSHD_CONFIG" || echo "ListenAddress 0.0.0.0" | $SUDO tee -a "$SSHD_CONFIG" > /dev/null
+# Escreve nossas configurações num arquivo dedicado
+$SUDO tee "$SSHD_DROPIN_DIR/00-userland.conf" > /dev/null << 'CONF'
+Port 2223
+ListenAddress 0.0.0.0
+PasswordAuthentication yes
+PermitRootLogin no
+CONF
 
-# Permitir login como usuário normal
-$SUDO sed -i 's/^#*PermitRootLogin .*/PermitRootLogin no/' "$SSHD_CONFIG"
-
-ok "sshd_config configurado (porta 2223)"
+ok "sshd configurado via $SSHD_DROPIN_DIR/00-userland.conf (porta 2223)"
 
 # --------------------------------------------------------------
 # 4. Gerar chaves do host
 # --------------------------------------------------------------
 log "Gerando chaves do host SSH..."
 $SUDO ssh-keygen -A && ok "Chaves do host geradas"
+
+# Valida a configuração antes de prosseguir
+if $SUDO sshd -t 2>/dev/null; then
+    ok "Configuração do sshd válida"
+else
+    warn "sshd -t reportou avisos (veja acima), mas seguindo..."
+fi
 
 # --------------------------------------------------------------
 # 5. Instalar o script de startup
