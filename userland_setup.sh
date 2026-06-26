@@ -2,7 +2,9 @@
 # =============================================================
 #  userland_setup.sh — Setup inicial do Ubuntu no Userland
 #  Execute UMA VEZ após instalar o Ubuntu do zero:
-#    chmod +x userland_setup.sh && bash userland_setup.sh
+#    bash userland_setup.sh
+#  ou direto do GitHub:
+#    wget -qO- https://raw.githubusercontent.com/Deyvesson/script-userland/main/userland_setup.sh | bash
 # =============================================================
 
 set -e  # Para execução se qualquer comando falhar
@@ -25,16 +27,33 @@ echo "======================================"
 echo ""
 
 # --------------------------------------------------------------
+# 0. Detectar necessidade de sudo
+# --------------------------------------------------------------
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+    log "Rodando como root — sudo não necessário"
+else
+    if command -v sudo > /dev/null 2>&1; then
+        SUDO="sudo"
+        log "Usuário comum detectado — usando sudo"
+    else
+        fail "Você não é root e o 'sudo' não está instalado."
+        fail "Entre como root primeiro com 'su' e rode o script novamente."
+        exit 1
+    fi
+fi
+
+# --------------------------------------------------------------
 # 1. Atualizar pacotes
 # --------------------------------------------------------------
 log "Atualizando lista de pacotes..."
-apt-get update -qq && ok "Lista atualizada"
+$SUDO apt-get update -qq && ok "Lista atualizada"
 
 # --------------------------------------------------------------
 # 2. Instalar dependências essenciais
 # --------------------------------------------------------------
 log "Instalando pacotes essenciais..."
-apt-get install -y -qq \
+$SUDO apt-get install -y -qq \
     openssh-server \
     curl \
     wget \
@@ -51,19 +70,19 @@ log "Configurando sshd..."
 SSHD_CONFIG="/etc/ssh/sshd_config"
 
 # Porta 2223
-sed -i 's/^#*Port .*/Port 2223/' "$SSHD_CONFIG"
-grep -q "^Port " "$SSHD_CONFIG" || echo "Port 2223" >> "$SSHD_CONFIG"
+$SUDO sed -i 's/^#*Port .*/Port 2223/' "$SSHD_CONFIG"
+$SUDO grep -q "^Port " "$SSHD_CONFIG" || echo "Port 2223" | $SUDO tee -a "$SSHD_CONFIG" > /dev/null
 
 # Permitir autenticação por senha
-sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' "$SSHD_CONFIG"
-grep -q "^PasswordAuthentication " "$SSHD_CONFIG" || echo "PasswordAuthentication yes" >> "$SSHD_CONFIG"
+$SUDO sed -i 's/^#*PasswordAuthentication .*/PasswordAuthentication yes/' "$SSHD_CONFIG"
+$SUDO grep -q "^PasswordAuthentication " "$SSHD_CONFIG" || echo "PasswordAuthentication yes" | $SUDO tee -a "$SSHD_CONFIG" > /dev/null
 
 # Escutar em todos os endereços
-sed -i 's/^#*ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG"
-grep -q "^ListenAddress " "$SSHD_CONFIG" || echo "ListenAddress 0.0.0.0" >> "$SSHD_CONFIG"
+$SUDO sed -i 's/^#*ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_CONFIG"
+$SUDO grep -q "^ListenAddress " "$SSHD_CONFIG" || echo "ListenAddress 0.0.0.0" | $SUDO tee -a "$SSHD_CONFIG" > /dev/null
 
 # Permitir login como usuário normal
-sed -i 's/^#*PermitRootLogin .*/PermitRootLogin no/' "$SSHD_CONFIG"
+$SUDO sed -i 's/^#*PermitRootLogin .*/PermitRootLogin no/' "$SSHD_CONFIG"
 
 ok "sshd_config configurado (porta 2223)"
 
@@ -71,7 +90,7 @@ ok "sshd_config configurado (porta 2223)"
 # 4. Gerar chaves do host
 # --------------------------------------------------------------
 log "Gerando chaves do host SSH..."
-ssh-keygen -A && ok "Chaves do host geradas"
+$SUDO ssh-keygen -A && ok "Chaves do host geradas"
 
 # --------------------------------------------------------------
 # 5. Instalar o script de startup
@@ -88,7 +107,11 @@ cat > "$STARTUP_SCRIPT" << 'STARTUP'
 
 _ul_start_sshd() {
     if ! pgrep -x sshd > /dev/null 2>&1; then
-        /usr/sbin/sshd > /dev/null 2>&1
+        if [ "$(id -u)" -eq 0 ]; then
+            /usr/sbin/sshd > /dev/null 2>&1
+        else
+            sudo /usr/sbin/sshd > /dev/null 2>&1
+        fi
         echo "[startup] sshd iniciado na porta 2223"
     fi
 }
@@ -126,7 +149,7 @@ log "Iniciando sshd agora..."
 if pgrep -x sshd > /dev/null 2>&1; then
     warn "sshd já está rodando"
 else
-    /usr/sbin/sshd && ok "sshd iniciado"
+    $SUDO /usr/sbin/sshd && ok "sshd iniciado"
 fi
 
 # --------------------------------------------------------------
