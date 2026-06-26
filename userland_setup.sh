@@ -51,14 +51,19 @@ sudo apt install -y -qq \
 # --------------------------------------------------------------
 log "Configurando sshd..."
 
-SSHD_MAIN="/etc/ssh/sshd_config"
+# Escreve um drop-in que sobrescreve o sshd_config padrão.
+# Robusto: não depende de sed nem da ordem/linhas do arquivo original.
+SSHD_DROPIN="/etc/ssh/sshd_config.d/99-userland.conf"
 
-# Trocar a porta padrão: "#Port 22" -> "Port 2223"
-sudo sed -i 's/^#Port 22/Port 2223/' "$SSHD_MAIN" && ok "Porta SSH alterada para 2223"
-
-# Descomentar "#ListenAddress 0.0.0.0" e "#PasswordAuthentication yes"
-sudo sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' "$SSHD_MAIN" && ok "ListenAddress habilitado"
-sudo sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' "$SSHD_MAIN" && ok "PasswordAuthentication habilitado"
-
+sudo mkdir -p /etc/ssh/sshd_config.d
+sudo tee "$SSHD_DROPIN" > /dev/null <<'EOF'
+Port 2223
+ListenAddress 0.0.0.0
+PasswordAuthentication yes
+EOF
+ok "Drop-in sshd criado em $SSHD_DROPIN (Port 2223, ListenAddress, PasswordAuthentication)"
 
 sudo ssh-keygen -A && ok "Chave gerada"
+
+sudo service ssh stop && ok "Serviço ssh parado"
+/usr/sbin/sshd && ok "Serviço ssh iniciado"
