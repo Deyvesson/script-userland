@@ -49,21 +49,21 @@ sudo apt install -y -qq \
 #    Ubuntu moderno tem "Include /etc/ssh/sshd_config.d/*.conf"
 #    no topo do sshd_config, então um arquivo aqui sobrescreve.
 # --------------------------------------------------------------
-log "Configurando sshd..."
+#log "Configurando sshd..."
 
 # Escreve um drop-in que sobrescreve o sshd_config padrão.
 # Robusto: não depende de sed nem da ordem/linhas do arquivo original.
-SSHD_DROPIN="/etc/ssh/sshd_config.d/99-userland.conf"
+#SSHD_DROPIN="/etc/ssh/sshd_config.d/99-userland.conf"
 
-sudo mkdir -p /etc/ssh/sshd_config.d
-sudo tee "$SSHD_DROPIN" > /dev/null <<'EOF'
-Port 2223
-ListenAddress 0.0.0.0
-PasswordAuthentication yes
-EOF
-ok "Drop-in sshd criado em $SSHD_DROPIN (Port 2223, ListenAddress, PasswordAuthentication)"
+#sudo mkdir -p /etc/ssh/sshd_config.d
+#sudo tee "$SSHD_DROPIN" > /dev/null <<'EOF'
+#Port 2223
+#ListenAddress 0.0.0.0
+#PasswordAuthentication yes
+#EOF
+#ok "Drop-in sshd criado em $SSHD_DROPIN (Port 2223, ListenAddress, PasswordAuthentication)"
 
-sudo ssh-keygen -A && ok "Chave gerada"
+#sudo ssh-keygen -A && ok "Chave gerada"
 
-sudo service ssh stop && ok "Serviço ssh parado"
-/usr/sbin/sshd && ok "Serviço ssh iniciado"
+#sudo service ssh stop && ok "Serviço ssh parado"
+#/usr/sbin/sshd && ok "Serviço ssh iniciado"
