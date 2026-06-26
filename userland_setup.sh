@@ -31,6 +31,7 @@ echo ""
 # --------------------------------------------------------------
 log "Atualizando lista de pacotes..."
 sudo apt update -qq && ok "Lista atualizada"
+sudo apt upgrade -y -qq && ok "Pacotes atualizados"
 
 # --------------------------------------------------------------
 # 2. Instalar dependências essenciais
